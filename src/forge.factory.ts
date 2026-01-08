@@ -1,7 +1,9 @@
 import { DynamicModule, ForwardReference, MiddlewareConsumer, Module, ModuleMetadata, Type } from '@nestjs/common';
 import { ForgeApplicationContextOptions, ForgeApplicationOptions } from './forge-options.interface';
 import { ForgeExtension, ForgeExtensionResolvable } from './extensions';
-import { NestFactory } from '@nestjs/core';
+import { ModuleRef, NestFactory } from '@nestjs/core';
+
+const ROOT_MODULE = Symbol('ForgeRootModule');
 
 class Forge {
 	public async create(appModule: IEntryNestModule, options?: ForgeApplicationOptions) {
@@ -94,7 +96,9 @@ class Forge {
 		}
 
 		@Module(meta)
-		class ForgeRootModule {
+		class ForgeRootModule implements IForgeRootModule {
+			public readonly [ROOT_MODULE] = true;
+			public constructor(public readonly moduleRef: ModuleRef) {}
 			public configure(consumer: MiddlewareConsumer) {
 				for (const extension of extensions) {
 					extension.configureRootModule(consumer);
@@ -109,7 +113,11 @@ class Forge {
 		const hasOriginalInstrument = originalInstrument && originalInstrument.instanceDecorator;
 
 		return {
-			instanceDecorator(instance) {
+			instanceDecorator: (instance) => {
+				if (this._isRootModule(instance)) {
+					// TODO
+				}
+
 				for (const extension of extensions) {
 					const response = extension.instrument(instance);
 
@@ -126,11 +134,21 @@ class Forge {
 			},
 		};
 	}
+
+	protected instrument(instance: unknown) {}
+
+	protected _isRootModule(instance: unknown): instance is IForgeRootModule {
+		return typeof instance === 'object' && instance !== null && instance[ROOT_MODULE] === true;
+	}
 }
 
 type IEntryNestModule = Type<any> | DynamicModule | ForwardReference | Promise<IEntryNestModule>;
 type Instrument = { instanceDecorator: (instance: unknown) => unknown };
 type ForgeExtensionConstructor = new (...args: any[]) => ForgeExtension;
+
+interface IForgeRootModule {
+	moduleRef: ModuleRef;
+}
 
 const forge = new Forge();
 
