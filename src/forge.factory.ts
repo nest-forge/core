@@ -1,5 +1,5 @@
 import { DynamicModule, ForwardReference, MiddlewareConsumer, Module, ModuleMetadata, Type } from '@nestjs/common';
-import { ForgeApplicationContextOptions, ForgeApplicationOptions } from './forge-options.interface';
+import { ForgeApplicationContextOptions, ForgeApplicationOptions, ForgeMicroserviceOptions } from './forge-options.interface';
 import { ForgeExtension, ForgeExtensionResolvable } from './extensions';
 import { ModuleRef, NestFactory } from '@nestjs/core';
 
@@ -31,6 +31,21 @@ class Forge {
 
 		for (const extension of extensions) {
 			extension.configureStandaloneApplication(app);
+		}
+
+		return app;
+	}
+
+	public async createMicroservice<T extends object>(appModule: IEntryNestModule, options: ForgeMicroserviceOptions & T) {
+		const extensions = this.discoverExtensions(options?.extensions ?? []);
+		const root = this.createRootModule(appModule, extensions);
+		const app = await NestFactory.createMicroservice<T>(root, {
+			...options,
+			instrument: this.createInstrument(extensions, options.instrument),
+		});
+
+		for (const extension of extensions) {
+			extension.configureMicroserviceApplication(app);
 		}
 
 		return app;

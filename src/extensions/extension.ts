@@ -1,4 +1,4 @@
-import { INestApplication, INestApplicationContext, MiddlewareConsumer, ModuleMetadata } from '@nestjs/common';
+import { INestApplication, INestApplicationContext, INestMicroservice, MiddlewareConsumer, ModuleMetadata } from '@nestjs/common';
 
 export abstract class ForgeExtension {
 	/**
@@ -19,9 +19,14 @@ export abstract class ForgeExtension {
 	public configureHttpApplication(application: INestApplication): any {}
 
 	/**
-	 * Configures a Nest application context. This is
+	 * Configures a Nest application context. This is for a standalone application that has no web server.
 	 */
 	public configureStandaloneApplication(context: INestApplicationContext): any {}
+
+	/**
+	 * Configures a Nest microservice context.
+	 */
+	public configureMicroserviceApplication(context: INestMicroservice): any {}
 
 	/**
 	 * Configures the root module of the application.
