@@ -15,7 +15,6 @@
 		"sourceMap": false,
 		"allowJs": false,
 		"outDir": "./dist",
-		"baseUrl": ".",
 		"forceConsistentCasingInFileNames": true,
 		"strictPropertyInitialization": false,
 		"stripInternal": true
