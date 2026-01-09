@@ -8,7 +8,7 @@ import { ForgeBaseComponent, ForgeController, ForgeModule, ForgeService } from '
 class Forge {
 	private _augmented = new Set<ForgeBaseComponent>();
 
-	public async create(appModule: IEntryNestModule, options?: ForgeApplicationOptions) {
+	public async create(appModule: IEntryNestModule, options: ForgeApplicationOptions = {}) {
 		const extensions = this.discoverExtensions(options?.extensions ?? []);
 		const root = this.createRootModule(appModule, extensions);
 		const instrument = this.createInstrument(extensions, options.instrument);
@@ -97,7 +97,7 @@ class Forge {
 		return Array.from(extensions.values());
 	}
 
-	protected resolveExtension(resolvable: ForgeExtensionResolvable): ForgeExtension {
+	protected resolveExtension(resolvable: ForgeExtensionResolvable): ForgeExtension | null {
 		if (resolvable === false || resolvable === null || resolvable === undefined) {
 			return null;
 		}
@@ -124,13 +124,13 @@ class Forge {
 		for (const extension of extensions) {
 			const extensionMeta = extension.getMetadata();
 
-			meta.imports.push(...(extensionMeta.imports ?? []));
-			meta.controllers.push(...(extensionMeta.controllers ?? []));
-			meta.providers.push(...(extensionMeta.providers ?? []));
-			meta.exports.push(...(extensionMeta.exports ?? []));
+			meta.imports!.push(...(extensionMeta.imports ?? []));
+			meta.controllers!.push(...(extensionMeta.controllers ?? []));
+			meta.providers!.push(...(extensionMeta.providers ?? []));
+			meta.exports!.push(...(extensionMeta.exports ?? []));
 		}
 
-		meta.imports.push(appModule as any);
+		meta.imports!.push(appModule as any);
 
 		@Module(meta)
 		@Global()
@@ -158,7 +158,7 @@ class Forge {
 		})
 		class ForgeRootProviderModule {}
 
-		meta.imports.unshift(ForgeRootProviderModule);
+		meta.imports!.unshift(ForgeRootProviderModule);
 
 		return ForgeRootModule;
 	}

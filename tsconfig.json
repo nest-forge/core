@@ -17,7 +17,8 @@
 		"outDir": "./dist",
 		"forceConsistentCasingInFileNames": true,
 		"strictPropertyInitialization": false,
-		"stripInternal": true
+		"stripInternal": true,
+		"strict": true
 	},
 	"include": [
 		"src/**/*"
