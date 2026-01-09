@@ -1,24 +1,78 @@
-import { DynamicModule, ForwardReference, Global, MiddlewareConsumer, Module, ModuleMetadata, Type } from '@nestjs/common';
+import {
+	DynamicModule,
+	ForwardReference,
+	Global,
+	INestApplication,
+	MiddlewareConsumer,
+	Module,
+	ModuleMetadata,
+	NestApplicationOptions,
+	Type,
+} from '@nestjs/common';
 import { ForgeApplicationContextOptions, ForgeApplicationOptions, ForgeMicroserviceOptions } from './forge-options.interface';
 import { ForgeExtension, ForgeExtensionResolvable } from './extensions';
-import { ModuleRef, NestFactory } from '@nestjs/core';
+import { AbstractHttpAdapter, ModuleRef, NestFactory } from '@nestjs/core';
 import { FORGE_FIELD_MODULE_REF, FORGE_ROOT_MODULE, FORGE_TOKEN_ROOT_MODULE } from './constants';
 import { ForgeBaseComponent, ForgeController, ForgeModule, ForgeService } from './architecture';
+import { NestApplicationContextOptions } from '@nestjs/common/interfaces/nest-application-context-options.interface';
+import { NestMicroserviceOptions } from '@nestjs/common/interfaces/microservices/nest-microservice-options.interface';
 
 class Forge {
 	private _augmented = new Set<ForgeBaseComponent>();
 
-	public async create(appModule: IEntryNestModule, options: ForgeApplicationOptions = {}) {
+	public async create<T extends INestApplication = INestApplication>(
+		appModule: IEntryNestModule,
+		options?: ForgeApplicationOptions
+	): Promise<T>;
+
+	public async create<T extends INestApplication = INestApplication>(
+		appModule: IEntryNestModule,
+		httpAdapter: AbstractHttpAdapter,
+		options?: ForgeApplicationOptions
+	): Promise<T>;
+
+	public async create<T extends INestApplication = INestApplication>(
+		appModule: IEntryNestModule,
+		optionsOrHttpAdapter?: ForgeApplicationOptions | AbstractHttpAdapter,
+		optionsFallback?: ForgeApplicationOptions
+	): Promise<T> {
+		let adapter = this._isHttpAdapter(optionsOrHttpAdapter) ? optionsOrHttpAdapter : undefined;
+
+		const options =
+			(typeof optionsFallback === 'object' ? optionsFallback : adapter ? {} : (optionsOrHttpAdapter as ForgeApplicationOptions)) ??
+			{};
+
 		const extensions = this.discoverExtensions(options?.extensions ?? []);
 		const root = this.createRootModule(appModule, extensions);
 		const instrument = this.createInstrument(extensions, options.instrument);
 
-		const app = await NestFactory.create(root, {
+		let createOptions: NestApplicationOptions = {
 			...options,
 			instrument: {
 				instanceDecorator: instrument.instanceDecorator,
 			},
-		});
+		};
+
+		for (const extension of extensions) {
+			const newOptions = await extension.configureHttpApplicationOptions(createOptions);
+			const newAdapter = await extension.configureHttpAdapter(adapter);
+
+			if (typeof newOptions === 'object' && newOptions !== null) {
+				createOptions = newOptions;
+			}
+
+			if (typeof newAdapter === 'object' && newAdapter !== null) {
+				adapter = newAdapter;
+			}
+		}
+
+		const createArgs: any[] = [root, createOptions];
+
+		if (adapter) {
+			createArgs.splice(1, 0, adapter);
+		}
+
+		const app = await NestFactory.create.apply(NestFactory, createArgs as any);
 
 		await this.augmentComponents(instrument.instances, extensions);
 
@@ -26,7 +80,7 @@ class Forge {
 			await extension.configureHttpApplication(app);
 		}
 
-		return app;
+		return app as T;
 	}
 
 	public async createApplicationContext(appModule: IEntryNestModule, options: ForgeApplicationContextOptions) {
@@ -34,12 +88,22 @@ class Forge {
 		const root = this.createRootModule(appModule, extensions);
 		const instrument = this.createInstrument(extensions, options.instrument);
 
-		const app = await NestFactory.createApplicationContext(root, {
+		let createOptions: NestApplicationContextOptions = {
 			...options,
 			instrument: {
 				instanceDecorator: instrument.instanceDecorator,
 			},
-		});
+		};
+
+		for (const extension of extensions) {
+			const newOptions = await extension.configureStandaloneApplicationOptions(createOptions);
+
+			if (typeof newOptions === 'object' && newOptions !== null) {
+				createOptions = newOptions;
+			}
+		}
+
+		const app = await NestFactory.createApplicationContext(root, createOptions);
 
 		await this.augmentComponents(instrument.instances, extensions);
 
@@ -55,12 +119,22 @@ class Forge {
 		const root = this.createRootModule(appModule, extensions);
 		const instrument = this.createInstrument(extensions, options.instrument);
 
-		const app = await NestFactory.createMicroservice<T>(root, {
+		let createOptions: NestMicroserviceOptions & T = {
 			...options,
 			instrument: {
 				instanceDecorator: instrument.instanceDecorator,
 			},
-		});
+		};
+
+		for (const extension of extensions) {
+			const newOptions = await extension.configureMicroserviceApplicationOptions(createOptions);
+
+			if (typeof newOptions === 'object' && newOptions !== null) {
+				createOptions = newOptions as NestMicroserviceOptions & T;
+			}
+		}
+
+		const app = await NestFactory.createMicroservice<T>(root, createOptions);
 
 		await this.augmentComponents(instrument.instances, extensions);
 
@@ -239,6 +313,10 @@ class Forge {
 
 	protected _isRootModule(instance: unknown): instance is IForgeRootModule {
 		return typeof instance === 'object' && instance !== null && instance[FORGE_ROOT_MODULE] === true;
+	}
+
+	protected _isHttpAdapter(instance: unknown): instance is AbstractHttpAdapter {
+		return typeof instance === 'object' && instance !== null && typeof instance['use'] === 'function';
 	}
 }
 

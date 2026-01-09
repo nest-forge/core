@@ -1,5 +1,15 @@
-import { INestApplication, INestApplicationContext, INestMicroservice, MiddlewareConsumer, ModuleMetadata } from '@nestjs/common';
+import {
+	INestApplication,
+	INestApplicationContext,
+	INestMicroservice,
+	MiddlewareConsumer,
+	ModuleMetadata,
+	NestApplicationOptions,
+} from '@nestjs/common';
 import { ForgeBaseComponent, ForgeController, ForgeModule, ForgeService } from '../architecture';
+import { NestApplicationContextOptions } from '@nestjs/common/interfaces/nest-application-context-options.interface';
+import { NestMicroserviceOptions } from '@nestjs/common/interfaces/microservices/nest-microservice-options.interface';
+import { AbstractHttpAdapter } from '@nestjs/core';
 
 export abstract class ForgeExtension {
 	/**
@@ -15,9 +25,25 @@ export abstract class ForgeExtension {
 	}
 
 	/**
+	 * Configures the HTTP adapter to use for the Nest application instance.
+	 *
+	 * @param current The current adapter instance, or `undefined` if not set (default will be used).
+	 */
+	public configureHttpAdapter(current?: AbstractHttpAdapter): ForgeHttpAdapterLike {
+		return;
+	}
+
+	/**
 	 * Configures a Nest application instance.
 	 */
 	public configureHttpApplication(application: INestApplication): any {}
+
+	/**
+	 * Configures the options object for a Nest application instance.
+	 */
+	public configureHttpApplicationOptions(options: NestApplicationOptions): NestApplicationOptions | Promise<NestApplicationOptions> {
+		return options;
+	}
 
 	/**
 	 * Configures a Nest application context. This is for a standalone application that has no web server.
@@ -25,9 +51,27 @@ export abstract class ForgeExtension {
 	public configureStandaloneApplication(context: INestApplicationContext): any {}
 
 	/**
+	 * Configures the options object for a standalone Nest application instance.
+	 */
+	public configureStandaloneApplicationOptions(
+		options: NestApplicationContextOptions
+	): NestApplicationContextOptions | Promise<NestApplicationContextOptions> {
+		return options;
+	}
+
+	/**
 	 * Configures a Nest microservice context.
 	 */
 	public configureMicroserviceApplication(context: INestMicroservice): any {}
+
+	/**
+	 * Configures the options object for a Nest microservice instance.
+	 */
+	public configureMicroserviceApplicationOptions(
+		options: NestMicroserviceOptions
+	): NestMicroserviceOptions | Promise<NestMicroserviceOptions> {
+		return options;
+	}
 
 	/**
 	 * Configures the root module of the application.
@@ -76,3 +120,5 @@ export interface ForgeExtensionMetadata extends ModuleMetadata {
 }
 
 export type ForgeExtensionResolvable = ForgeExtension | (new () => ForgeExtension) | null | undefined | false;
+
+export type ForgeHttpAdapterLike = AbstractHttpAdapter | null | undefined | Promise<AbstractHttpAdapter | null | undefined>;
