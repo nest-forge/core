@@ -198,6 +198,8 @@ class Forge {
 	protected async augmentComponents(instances: ForgeBaseComponent[], extensions: ForgeExtension[]) {
 		for (const instance of instances) {
 			if (!this._augmented.has(instance)) {
+				await this.augmentComponent(instance, extensions);
+
 				if (instance instanceof ForgeModule) {
 					await this.augmentModule(instance, extensions);
 				} else if (instance instanceof ForgeController) {
@@ -208,6 +210,12 @@ class Forge {
 
 				this._augmented.add(instance);
 			}
+		}
+	}
+
+	protected async augmentComponent(instance: ForgeBaseComponent, extensions: ForgeExtension[]) {
+		for (const extension of extensions) {
+			await extension.augmentComponent(instance, instance[FORGE_FIELD_MODULE_REF]);
 		}
 	}
 

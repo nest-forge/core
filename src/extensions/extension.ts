@@ -1,5 +1,5 @@
 import { INestApplication, INestApplicationContext, INestMicroservice, MiddlewareConsumer, ModuleMetadata } from '@nestjs/common';
-import { ForgeController, ForgeModule, ForgeService } from '../architecture';
+import { ForgeBaseComponent, ForgeController, ForgeModule, ForgeService } from '../architecture';
 
 export abstract class ForgeExtension {
 	/**
@@ -39,6 +39,11 @@ export abstract class ForgeExtension {
 	 * queried.
 	 */
 	public instrument(instance: unknown): any {}
+
+	/**
+	 * Augments a `ForgeBaseComponent` instance.
+	 */
+	public augmentComponent(instance: ForgeBaseComponent, moduleRef: any): any {}
 
 	/**
 	 * Augments a `ForgeModule` instance.
