@@ -20,10 +20,10 @@ class Forge {
 			},
 		});
 
-		this.augmentComponents(instrument.instances, extensions);
+		await this.augmentComponents(instrument.instances, extensions);
 
 		for (const extension of extensions) {
-			extension.configureHttpApplication(app);
+			await extension.configureHttpApplication(app);
 		}
 
 		return app;
@@ -41,10 +41,10 @@ class Forge {
 			},
 		});
 
-		this.augmentComponents(instrument.instances, extensions);
+		await this.augmentComponents(instrument.instances, extensions);
 
 		for (const extension of extensions) {
-			extension.configureStandaloneApplication(app);
+			await extension.configureStandaloneApplication(app);
 		}
 
 		return app;
@@ -62,10 +62,10 @@ class Forge {
 			},
 		});
 
-		this.augmentComponents(instrument.instances, extensions);
+		await this.augmentComponents(instrument.instances, extensions);
 
 		for (const extension of extensions) {
-			extension.configureMicroserviceApplication(app);
+			await extension.configureMicroserviceApplication(app);
 		}
 
 		return app;
@@ -139,9 +139,9 @@ class Forge {
 
 			public constructor(public readonly moduleRef: ModuleRef) {}
 
-			public configure(consumer: MiddlewareConsumer) {
+			public async configure(consumer: MiddlewareConsumer) {
 				for (const extension of extensions) {
-					extension.configureRootModule(consumer);
+					await extension.configureRootModule(consumer);
 				}
 			}
 		}
@@ -169,7 +169,7 @@ class Forge {
 
 		return {
 			instances,
-			instanceDecorator: (instance) => {
+			instanceDecorator: async (instance) => {
 				if (this._isRootModule(instance)) {
 					// TODO
 				}
@@ -179,7 +179,7 @@ class Forge {
 				}
 
 				for (const extension of extensions) {
-					const response = extension.instrument(instance);
+					const response = await extension.instrument(instance);
 
 					if (response !== undefined) {
 						return response;
@@ -195,15 +195,15 @@ class Forge {
 		};
 	}
 
-	protected augmentComponents(instances: ForgeBaseComponent[], extensions: ForgeExtension[]) {
+	protected async augmentComponents(instances: ForgeBaseComponent[], extensions: ForgeExtension[]) {
 		for (const instance of instances) {
 			if (!this._augmented.has(instance)) {
 				if (instance instanceof ForgeModule) {
-					this.augmentModule(instance, extensions);
+					await this.augmentModule(instance, extensions);
 				} else if (instance instanceof ForgeController) {
-					this.augmentController(instance, extensions);
+					await this.augmentController(instance, extensions);
 				} else if (instance instanceof ForgeService) {
-					this.augmentService(instance, extensions);
+					await this.augmentService(instance, extensions);
 				}
 
 				this._augmented.add(instance);
@@ -211,21 +211,21 @@ class Forge {
 		}
 	}
 
-	protected augmentModule(instance: ForgeModule, extensions: ForgeExtension[]): void {
+	protected async augmentModule(instance: ForgeModule, extensions: ForgeExtension[]) {
 		for (const extension of extensions) {
-			extension.augmentModule(instance, instance[FORGE_FIELD_MODULE_REF]);
+			await extension.augmentModule(instance, instance[FORGE_FIELD_MODULE_REF]);
 		}
 	}
 
-	protected augmentController(instance: ForgeController, extensions: ForgeExtension[]): void {
+	protected async augmentController(instance: ForgeController, extensions: ForgeExtension[]) {
 		for (const extension of extensions) {
-			extension.augmentController(instance, instance[FORGE_FIELD_MODULE_REF]);
+			await extension.augmentController(instance, instance[FORGE_FIELD_MODULE_REF]);
 		}
 	}
 
-	protected augmentService(instance: ForgeService, extensions: ForgeExtension[]): void {
+	protected async augmentService(instance: ForgeService, extensions: ForgeExtension[]) {
 		for (const extension of extensions) {
-			extension.augmentService(instance, instance[FORGE_FIELD_MODULE_REF]);
+			await extension.augmentService(instance, instance[FORGE_FIELD_MODULE_REF]);
 		}
 	}
 
