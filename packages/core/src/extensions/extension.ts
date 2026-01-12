@@ -13,18 +13,6 @@ import { AbstractHttpAdapter } from '@nestjs/core';
 
 export abstract class ForgeExtension {
 	/**
-	 * The metdata for this extension.
-	 */
-	private readonly _metadata: ForgeExtensionMetadata;
-
-	/**
-	 * Constructs a new forge extension instance.
-	 */
-	public constructor(options?: ForgeExtensionMetadata) {
-		this._metadata = options || {};
-	}
-
-	/**
 	 * Configures the HTTP adapter to use for the Nest application instance.
 	 *
 	 * @param current The current adapter instance, or `undefined` if not set (default will be used).
@@ -110,20 +98,45 @@ export abstract class ForgeExtension {
 	public augmentService(instance: ForgeService, moduleRef: any): any {}
 
 	/**
-	 * Returns the metadata for this extension.
+	 * Returns an array of imports to add onto the root module.
 	 */
-	public getMetadata() {
-		return this._metadata;
+	public getRootImports(): ModuleImport[] {
+		return [];
+	}
+
+	/**
+	 * Returns an array of providers to add onto the root module.
+	 */
+	public getRootProviders(): ModuleProvider[] {
+		return [];
+	}
+
+	/**
+	 * Returns an array of controllers to add onto the root module.
+	 */
+	public getRootControllers(): ModuleController[] {
+		return [];
+	}
+
+	/**
+	 * Returns an array of exports to add onto the root module.
+	 */
+	public getRootExports(): ModuleExport[] {
+		return [];
+	}
+
+	/**
+	 * Returns an array of nested extensions that will be imported along with this one.
+	 */
+	public getNestedExtensions(): ForgeExtensionResolvable[] {
+		return [];
 	}
 }
 
-export interface ForgeExtensionMetadata extends ModuleMetadata {
-	/**
-	 * An optional array of nested extensions to import.
-	 */
-	extensions?: ForgeExtensionResolvable[];
-}
+export type ModuleImport = NonNullable<ModuleMetadata['imports']>[number];
+export type ModuleProvider = NonNullable<ModuleMetadata['providers']>[number];
+export type ModuleController = NonNullable<ModuleMetadata['controllers']>[number];
+export type ModuleExport = NonNullable<ModuleMetadata['exports']>[number];
 
 export type ForgeExtensionResolvable = ForgeExtension | (new () => ForgeExtension) | null | undefined | false;
-
 export type ForgeHttpAdapterLike = AbstractHttpAdapter | null | undefined | Promise<AbstractHttpAdapter | null | undefined>;

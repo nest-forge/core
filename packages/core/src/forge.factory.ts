@@ -51,7 +51,7 @@ class Forge {
 			{};
 
 		const extensions = this.discoverExtensions(options?.extensions ?? []);
-		const root = this.createRootModule(appModule, extensions);
+		const root = await this.createRootModule(appModule, extensions);
 		const instrument = this.createInstrument(extensions, options.instrument);
 
 		let createOptions: NestApplicationOptions = {
@@ -178,9 +178,7 @@ class Forge {
 			const extension = this.resolveExtension(resolvable);
 
 			if (extension !== null) {
-				const metadata = extension.getMetadata();
-
-				for (const nestedExtension of this.discoverExtensions(metadata.extensions)) {
+				for (const nestedExtension of this.discoverExtensions(extension.getNestedExtensions())) {
 					extensions.delete(nestedExtension.constructor as ForgeExtensionConstructor);
 					extensions.set(nestedExtension.constructor as ForgeExtensionConstructor, nestedExtension);
 				}
@@ -209,7 +207,7 @@ class Forge {
 		throw new Error(`Unsupported extension resolvable "${String(resolvable)}"`);
 	}
 
-	protected createRootModule(appModule: IEntryNestModule, extensions: ForgeExtension[]) {
+	protected async createRootModule(appModule: IEntryNestModule, extensions: ForgeExtension[]) {
 		const meta: ModuleMetadata = {
 			imports: [],
 			controllers: [],
@@ -218,12 +216,12 @@ class Forge {
 		};
 
 		for (const extension of extensions) {
-			const extensionMeta = extension.getMetadata();
+			const extensionMeta = await this._getExtensionMetadata(extension);
 
-			meta.imports!.push(...(extensionMeta.imports ?? []));
-			meta.controllers!.push(...(extensionMeta.controllers ?? []));
-			meta.providers!.push(...(extensionMeta.providers ?? []));
-			meta.exports!.push(...(extensionMeta.exports ?? []));
+			meta.imports!.push(...extensionMeta.imports);
+			meta.controllers!.push(...extensionMeta.controllers);
+			meta.providers!.push(...extensionMeta.providers);
+			meta.exports!.push(...extensionMeta.exports);
 		}
 
 		meta.imports!.push(appModule as any);
@@ -257,6 +255,24 @@ class Forge {
 		meta.imports!.unshift(ForgeRootProviderModule);
 
 		return ForgeRootModule;
+	}
+
+	protected async _getExtensionMetadata(extension: ForgeExtension): Promise<ExtensionMetadata> {
+		const results = await Promise.all([
+			extension.getRootImports(),
+			extension.getRootProviders(),
+			extension.getRootExports(),
+			extension.getRootControllers(),
+			extension.getNestedExtensions(),
+		]);
+
+		return {
+			imports: results[0],
+			providers: results[1],
+			exports: results[2],
+			controllers: results[3],
+			extensions: results[4],
+		};
 	}
 
 	protected createInstrument(extensions: ForgeExtension[], originalInstrument?: Instrument): InstrumentResponse {
@@ -379,10 +395,17 @@ class Forge {
 type IEntryNestModule = Type<any> | DynamicModule | ForwardReference | Promise<IEntryNestModule>;
 type Instrument = { instanceDecorator: (instance: unknown) => unknown };
 type ForgeExtensionConstructor = new (...args: any[]) => ForgeExtension;
+type NonNullableFields<T> = {
+	[P in keyof T]-?: NonNullable<T[P]>;
+};
 
 interface InstrumentResponse {
 	instances: ForgeBaseComponent[];
 	instanceDecorator: (instance: unknown) => any;
+}
+
+interface ExtensionMetadata extends NonNullableFields<ModuleMetadata> {
+	extensions: ForgeExtensionResolvable[];
 }
 
 /**

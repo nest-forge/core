@@ -8,6 +8,31 @@ import { AbstractHttpAdapter } from '@nestjs/core';
 export class LifecycleExtension extends ForgeExtension {
 	private readonly logger = new Logger('BasicExtension');
 
+	getNestedExtensions() {
+		this.logger.debug('getNestedExtensions');
+		return [];
+	}
+
+	getRootImports() {
+		this.logger.debug('getRootImports');
+		return [];
+	}
+
+	getRootProviders() {
+		this.logger.debug('getRootProviders');
+		return [];
+	}
+
+	getRootExports() {
+		this.logger.debug('getRootExports');
+		return [];
+	}
+
+	getRootControllers() {
+		this.logger.debug('getRootControllers');
+		return [];
+	}
+
 	configureHttpApplicationOptions(options: NestApplicationOptions) {
 		this.logger.debug('configureHttpApplicationOptions');
 		return options;
