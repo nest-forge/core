@@ -12,18 +12,18 @@ import {
 } from '@nestjs/common';
 import { ForgeApplicationContextOptions, ForgeApplicationOptions, ForgeMicroserviceOptions } from './forge-options.interface';
 import { ForgeExtension, ForgeExtensionResolvable } from './extensions';
-import { AbstractHttpAdapter, ModuleRef, NestApplication, NestApplicationContext, NestFactory } from '@nestjs/core';
+import { AbstractHttpAdapter, ModuleRef, NestApplicationContext, NestFactory } from '@nestjs/core';
 import {
 	FORGE_FIELD_MODULE_REF,
 	FORGE_PATCH_BOOT_CALLBACK,
 	FORGE_PATCH_ENABLE_INIT,
 	FORGE_PATCHED,
-	FORGE_ROOT_MODULE,
 	FORGE_TOKEN_ROOT_MODULE,
 } from './constants';
 import { ForgeBaseComponent, ForgeController, ForgeModule, ForgeService } from './architecture';
 import { NestApplicationContextOptions } from '@nestjs/common/interfaces/nest-application-context-options.interface';
 import { NestMicroserviceOptions } from '@nestjs/common/interfaces/microservices/nest-microservice-options.interface';
+import { FORGE_APP_OPTIONS, FORGE_ROOT_MODULE } from './constants-public';
 
 class Forge {
 	private _augmented = new Set<ForgeBaseComponent>();
@@ -51,7 +51,7 @@ class Forge {
 			{};
 
 		const extensions = this.discoverExtensions(options?.extensions ?? []);
-		const root = await this.createRootModule(appModule, extensions);
+		const root = await this.createRootModule(appModule, extensions, options);
 		const instrument = this.createInstrument(extensions, options.instrument);
 
 		let createOptions: NestApplicationOptions = {
@@ -96,7 +96,7 @@ class Forge {
 
 	public async createApplicationContext(appModule: IEntryNestModule, options: ForgeApplicationContextOptions) {
 		const extensions = this.discoverExtensions(options?.extensions ?? []);
-		const root = this.createRootModule(appModule, extensions);
+		const root = this.createRootModule(appModule, extensions, options);
 		const instrument = this.createInstrument(extensions, options.instrument);
 
 		let createOptions: NestApplicationContextOptions = {
@@ -135,7 +135,7 @@ class Forge {
 
 	public async createMicroservice<T extends object>(appModule: IEntryNestModule, options: ForgeMicroserviceOptions & T) {
 		const extensions = this.discoverExtensions(options?.extensions ?? []);
-		const root = this.createRootModule(appModule, extensions);
+		const root = this.createRootModule(appModule, extensions, options);
 		const instrument = this.createInstrument(extensions, options.instrument);
 
 		let createOptions: NestMicroserviceOptions & T = {
@@ -207,7 +207,7 @@ class Forge {
 		throw new Error(`Unsupported extension resolvable "${String(resolvable)}"`);
 	}
 
-	protected async createRootModule(appModule: IEntryNestModule, extensions: ForgeExtension[]) {
+	protected async createRootModule(appModule: IEntryNestModule, extensions: ForgeExtension[], options: any) {
 		const meta: ModuleMetadata = {
 			imports: [],
 			controllers: [],
@@ -247,8 +247,12 @@ class Forge {
 					provide: FORGE_TOKEN_ROOT_MODULE,
 					useClass: ForgeRootModule,
 				},
+				{
+					provide: FORGE_APP_OPTIONS,
+					useValue: options,
+				},
 			],
-			exports: [FORGE_TOKEN_ROOT_MODULE],
+			exports: [FORGE_TOKEN_ROOT_MODULE, FORGE_APP_OPTIONS],
 		})
 		class ForgeRootProviderModule {}
 
