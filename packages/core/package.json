@@ -1,7 +1,7 @@
 {
 	"name": "@nest-forge/core",
 	"description": "",
-	"version": "0.0.3",
+	"version": "0.0.0",
 	"scripts": {
 		"build": "rimraf dist && tsc -p tsconfig.json",
 		"watch": "rimraf dist && tsc -w -p tsconfig.json",
